@@ -3,65 +3,81 @@ import pandas as pd
 from scipy.stats import norm
 
 
-def matrixcall(greek, sp, kp, rfr, vol, te):
-    if greek == 'Delta':
-        return deltacall(sp, kp, rfr, vol, te)
-    elif greek == 'Gamma':
-        return gammacall(sp, kp, rfr, vol, te)
-    elif greek == 'Theta':
-        return thetacall(sp, kp, rfr, vol, te)
-    elif greek == 'Vega':
-        return vegacall(sp, kp, rfr, vol, te)
+class op:
+    def __init__(self, S__t, K, r, sigma, t):
+        self.S__t = S__t
+        self.K = K
+        self.r = r
+        self.sigma = sigma
+        self.t = t / 365
+    
+    @property
+    def d1(self):
+        return (np.log(self.S__t / self.K) + (self.r + (self.sigma**2 / 2)) * (self.t)) / (self.sigma * np.sqrt(self.t))
+    
+    @property
+    def d2(self):
+        return self.d1 - self.sigma * np.sqrt(self.t)
         
-
-
-def deltacall(S__t, K, r, sigma, t):
-    d1 = (np.log(S__t / K) + (r + (sigma**2 / 2)) * (t/365)) / (sigma * np.sqrt(t/365))
-    return norm.cdf(d1)
-
-def gammacall(S__t, K, r, sigma, t):
-    d1 = (np.log(S__t / K) + (r + (sigma**2 / 2)) * (t/365)) / (sigma * np.sqrt(t/365))
-    return norm.pdf(d1) / (S__t * sigma * np.sqrt(t))
-
-def thetacall(S__t, K, r, sigma, t):
-    d1 = (np.log(S__t / K) + (r + (sigma**2 / 2)) * (t/365)) / (sigma * np.sqrt(t/365))
-    d2 = d1 - sigma * np.sqrt(t/365)
-    return (-S__t * norm.pdf(d1) * sigma / 2 * np.sqrt(t)) - (r * K * np.exp(-r * t) * norm.cdf(d2))
-
-def vegacall(S__t, K, r, sigma, t):
-    d1 = (np.log(S__t / K) + (r + (sigma**2 / 2)) * (t/365)) / (sigma * np.sqrt(t/365))
-    return S__t * np.sqrt(t) * norm.pdf(d1)
+    #Delta Calls and Puts
     
-def matrixput(greek, sp, kp, rfr, vol,  te):
+    def deltacall(self):
+        return norm.cdf(self.d1)
+    
+    def deltaput(self):
+        return norm.cdf(self.d1) -1
+    
+    #Gamma Calls and Puts
+    
+    def gammacall(self):
+        return norm.pdf(self.d1) / (self.S__t * self.sigma * np.sqrt(self.t)) 
+
+    def gammaput(self):
+        return norm.pdf(self.d1) / (self.S__t * self.sigma * np.sqrt(self.t))
+        
+    #Theta Calls and Puts
+
+    def thetacall(self):
+        return (-self.S__t * norm.pdf(self.d1) * self.sigma / 2 * np.sqrt(self.t)) - (self.r * self.K * np.exp(-self.r * self.t) * norm.cdf(self.d2))
+    
+    def thetaput(self):
+        return (-self.S__t * norm.pdf(self.d1) * self.sigma / 2 * np.sqrt(self.t)) + (self.r * self.K * np.exp(-self.r * self.t) * norm.cdf(-self.d2))
+
+    # Vega Calls and Puts
+    
+    def vegacall(self):
+        return self.S__t * np.sqrt(self.t) * norm.pdf(self.d1)
+    
+    def vegaput(self):
+        return self.S__t * np.sqrt(self.t) * norm.pdf(self.d1)
+    
+
+
+
+
+    
+    
+    
+def matrixcall(greek, sp, kp, rfr, vol, te):
+    option = op(sp, kp, rfr, vol, te)
     if greek == 'Delta':
-        return deltaput(sp,kp,rfr,vol,te)
+        return option.deltacall()
     elif greek == 'Gamma':
-        return gammaput(sp,kp,rfr,vol,te)
+        return option.gammacall()
     elif greek == 'Theta':
-        return thetaput(sp,kp,rfr,vol,te)
-    elif greek == 'Vega':
-        return vegaput(sp,kp,rfr,vol,te)
+        return option.thetacall()
+    elif greek == "Vega":
+        return option.vegacall()
 
-
-def deltaput(S__t, K, r, sigma, t):
-    d1 = (np.log(S__t / K) + (r + (sigma**2 / 2)) * (t/365)) / (sigma * np.sqrt(t/365))
-    return norm.cdf(d1) - 1
-
-def gammaput(S__t, K, r, sigma, t):
-    d1 = (np.log(S__t / K) + (r + (sigma**2 / 2)) * (t/365)) / (sigma * np.sqrt(t/365))
-    return norm.pdf(d1) / (S__t * sigma * np.sqrt(t))
-
-def thetaput(S__t, K, r, sigma, t):
-    d1 = (np.log(S__t / K) + (r + (sigma**2 / 2)) * (t/365)) / (sigma * np.sqrt(t/365))
-    d2 = d1 - sigma * np.sqrt(t/365)
-    return (-S__t * norm.pdf(d1) * sigma / 2 * np.sqrt(t)) + (r * K * np.exp(-r * t) * norm.cdf(-d2))
-    
-
-def vegaput(S__t, K, r, sigma, t):
-    d1 = (np.log(S__t / K) + (r + (sigma**2 / 2)) * (t/365)) / (sigma * np.sqrt(t/365))
-    return S__t * np.sqrt(t) * norm.pdf(d1)
-
-
-    
+def matrixput(greek, sp, kp, rfr, vol, te):
+    option = op(sp, kp, rfr, vol, te)
+    if greek == 'Delta':
+        return option.deltaput()
+    elif greek == 'Gamma':
+        return option.gammaput()
+    elif greek == 'Theta':
+        return option.thetaput()
+    elif greek == "Vega":
+        return option.vegaput()
     
     
