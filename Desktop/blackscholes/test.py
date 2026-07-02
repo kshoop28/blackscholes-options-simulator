@@ -1,19 +1,56 @@
-import streamlit as st
+import yfinance as yf
+from datetime import date, timedelta
+import sys
+import pandas as pd
 
-# 1. Create selection mode
-sidebar_mode = st.sidebar.radio("Select Settings Panel", ["Data Filters", "Model Hyperparameters"])
+ticker = yf.Ticker("AAPL")
 
-# 2. Dynamically swap the layout based on selection
-if sidebar_mode == "Data Filters":
-    st.sidebar.subheader("📅 Data Filters")
-    start_date = st.sidebar.date_input("Start Date")
-    category = st.sidebar.selectbox("Category", ["All", "Electronics", "Clothing"])
+
+
+inp = inp
+test = ticker.options[:inp]
+
+
+calldf = []
+putdf = []
+for date in test:
+    try:
+        aqr = str(date)
+        aqr = aqr.replace('00:00:00','').strip()
+        chain = ticker.option_chain(aqr)
+        calldf.append(chain.calls)
+        putdf.append(chain.puts)
+    except ValueError:
+        pass
+
+dfc = pd.concat(calldf)
+dfp = pd.concat(putdf)
+
+print(dfc)
+
+        
     
-elif sidebar_mode == "Model Hyperparameters":
-    st.sidebar.subheader("⚙️ Model Settings")
-    learning_rate = st.sidebar.slider("Learning Rate", 0.001, 0.1, 0.01)
-    epochs = st.sidebar.number_input("Epochs", min_value=1, value=10)
 
-# Main App Content
-st.title("Dynamic Sidebar Application")
-st.write("The sidebar widgets change depending on your selection above!")
+    
+    
+    
+sys.exit()
+
+chain = ticker.option_chain()
+sys.exit()
+
+sys.exit()
+
+
+
+
+
+
+
+
+calls = chain.calls
+puts = chain.puts
+
+
+print("Using expiration:", expiration)
+print(calls[["contractSymbol", "strike", "bid", "ask", "impliedVolatility"]])

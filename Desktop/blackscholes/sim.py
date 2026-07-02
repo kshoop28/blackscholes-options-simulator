@@ -4,12 +4,20 @@ import pandas as pd
 import yfinance as yf
 from scipy.stats import norm
 import inspect
+from datetime import datetime
+from matplotlib import projections
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+
+
+import plotly.graph_objects as go
+
 
 from markets import convert
 from greeks import matrixcall
 from greeks import matrixput
-from matrix import matcall
-from matrix import matput
+from greeksmatrix import matcall
+from greeksmatrix import matput
 
 
 
@@ -19,7 +27,6 @@ st.header('Black-Scholes Options Price Simulator', divider = 'blue')
 st.latex(r'C(S,t) = N(d_1)S - N(d_2)K e^{-rt}')
 st.latex(r'd_1 = \frac{\ln(\frac{S}{K}) + (r + \frac{\sigma^2}{2})t}{\sigma \sqrt{t}} ')
 st.latex(r'd_2 = d_1 - \sigma\sqrt{t}')
-
 
 
 def main():
@@ -32,22 +39,95 @@ def main():
     
 
 def markets():
-    try:
+    global tick
+    try: 
         with st.sidebar:
             marketcallput = st.radio("Choose which type of option you would like to purchase", ['Call', 'Put'])
             tick = st.text_input("Ticker: ")
+        
+            strike_input = st.text_input("Minimum Strike:", value="100")
+            
+
+            strike = float(strike_input)
+            
+            
+            date_input = st.text_input("Number of expiration dates to include", value = 1)
+            
+            if date_input == None:
+                raise ValueError()
+            
+            if strike == None:
+                raise ValueError()
+            
+            
+    
+
             if tick == '':
                 raise ValueError()
-        data = convert(tick, marketcallput)
+            
     except ValueError:
-        pass
+        st.write("")
+        
     else:
-        marketoutput(data)
-        
-        
+        market_data, vol_surface = convert(marketcallput, tick, strike, date_input)
+
+        marketoutput(market_data)
+        createsurf(vol_surface)
+    
+
+def createsurf(volsurf):
+    df = volsurf.copy()
+
+    df = df.dropna(subset=['strike', 'days_to_maturity', 'impliedVolatility'])
+
+    df = df[
+        (df['impliedVolatility'] > 0) &
+        (df['impliedVolatility'] < 2) &
+        (df['days_to_maturity'] > 0)
+    ]
+
+    low = df['strike'].quantile(0.05)
+    high = df['strike'].quantile(0.95)
+    df = df[df['strike'].between(low, high)]
+
+    surface_df = df.pivot_table(
+        index='days_to_maturity',
+        columns='strike',
+        values='impliedVolatility',
+        aggfunc='mean'
+    )
+
+    fig = go.Figure(data=[
+        go.Surface(
+            x=surface_df.columns,
+            y=surface_df.index,
+            z=surface_df.values,
+            connectgaps = True
+        )
+    ])
+
+    fig.update_layout(
+        title='Volatility Surface',
+        scene=dict(
+            xaxis_title='Strike',
+            yaxis_title='Days to Maturity',
+            zaxis_title='Implied Volatility'
+            
+        ),
+        height=700
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
 def marketoutput(data):
-   st.write(data[['lastTradeDate','strike','impliedVolatility','lastPrice']])
-   
+    try:
+        if data.empty:
+            raise TypeError()
+        st.write(data[['lastTradeDate','strike','impliedVolatility','lastPrice']])
+    except TypeError:
+        st.write(f'No options were purchased with that strike today')
+        
+
 
 def myown():
     global calc
